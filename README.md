@@ -1,1 +1,1 @@
-# sparkNotebook
+# sparkNotebook for Qubole
