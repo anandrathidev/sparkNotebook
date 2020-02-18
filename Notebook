@@ -1,16 +1,41 @@
-pyspark>
-
-d = [{'A': 'A1', 'B': "B1", 'C': "C1", 'D': "08/02/2019" }, {'A': 'A1', 'B': "B2", 'C': "C2", 'D': "08/02/2020" },{'A': 'A2', 'B': "B3", 'C': "C3", 'D': "08/02/2019" }, {'A': 'A2', 'B': "B4", 'C': "C4", 'D': "08/02/202" }]
+d = [   {'A': 'A1', 'B': "B1", 'C': "C1", 'D': "08/02/2019" },   {'A': 'A1', 'B': "B1", 'C': "C1", 'D': "08/02/2021" },   {'A': 'A1', 'B': "B2", 'C': "C2", 'D': "08/02/2020" },  {'A': 'A1', 'B': "B2", 'C': "C2", 'D': "08/02/2021" },  {'A': 'A2', 'B': "B3", 'C': "C3", 'D': "08/02/2019" },   {'A': 'A2', 'B': "B3", 'C': "C3", 'D': "08/02/2021" },   {'A': 'A2', 'B': "B4", 'C': "C4", 'D': "08/02/2020" },   {'A': 'A2', 'B': "B4", 'C': "C4", 'D': "08/02/2021" }   ]
 
 from pyspark.sql.types import StringType
 from pyspark.sql.types import DateType
 from pyspark.sql.types import StructField
 from pyspark.sql.types import StructType
 from pyspark.sql.functions import to_timestamp
+from pyspark.sql.functions import count, max as max_
 
 schema = StructType([ StructField("A", StringType(), True), StructField("B", StringType(), True), StructField("C", StringType(), True) , StructField("D", StringType(), True) ]) 
 df = spark.createDataFrame(d, schema)
 
 df1 = df.withColumn("D", to_timestamp( df['D'], 'dd/MM/yyyy' ) )
+df2 = df1.groupBy(df1.A, df1.B).agg(max_(df1.D).alias("D"))
 
+maxdt = df2.alias('maxdt')
+origrt = df1.distinct("A","B","C").alias('origrt')
+
+def myjoin(df1, df2, cond, how='left'):
+    df = df1.join(df2, cond, how=how)
+    repeated_columns = [c for c in df1.columns if c in df2.columns]
+    print(repeated_columns)
+    for col in repeated_columns:
+        df.show(2)
+        print(f"drop {col}")
+        df = df.drop(df1[col])
+    return df
+
+maxdt.show()
+origrt.show()
+df_join = myjoin(maxdt, origrt, ((maxdt.A == origrt.A) & (maxdt.B == origrt.B) ) , how="left" )
+df_join.show()
+
+
+origrt.createOrReplaceTempView("orig")
+df_join = spark.sql("select orig2.A, orig2.B, orig2.C, temp.D from ( select A,B, max(D) as D from orig group by A,B ) as temp left join (select distinct A,B,C from orig) as orig2 on orig2.A = temp.A and orig2.B = temp.B" )
+df_join.show()
+
+df_join = myjoin(maxdt, origrt, ((maxdt.A == origrt.A) & (maxdt.B == origrt.B) ) , how="left" )
+df_join.show()
 df1.select()
