@@ -1,1 +1,16 @@
+pyspark>
 
+d = [{'A': 'A1', 'B': "B1", 'C': "C1", 'D': "08/02/2019" }, {'A': 'A1', 'B': "B2", 'C': "C2", 'D': "08/02/2020" },{'A': 'A2', 'B': "B3", 'C': "C3", 'D': "08/02/2019" }, {'A': 'A2', 'B': "B4", 'C': "C4", 'D': "08/02/202" }]
+
+from pyspark.sql.types import StringType
+from pyspark.sql.types import DateType
+from pyspark.sql.types import StructField
+from pyspark.sql.types import StructType
+from pyspark.sql.functions import to_timestamp
+
+schema = StructType([ StructField("A", StringType(), True), StructField("B", StringType(), True), StructField("C", StringType(), True) , StructField("D", StringType(), True) ]) 
+df = spark.createDataFrame(d, schema)
+
+df1 = df.withColumn("D", to_timestamp( df['D'], 'dd/MM/yyyy' ) )
+
+df1.select()
